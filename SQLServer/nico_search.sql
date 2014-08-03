@@ -1,3 +1,5 @@
+use sample
+go
 
 declare @nico_response table (id int identity(0,1), document xml, url varchar(max))
 
