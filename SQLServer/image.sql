@@ -14,19 +14,22 @@ go
 /*
 insert into image_data(name, data)
 select
-	'delete_24_64_48',
-	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\delete_24_64_48.bmp', SINGLE_BLOB) as bin)
+	'Desert_24_256_192',
+	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Desert_24_256_192.bmp', SINGLE_BLOB) as bin)
 go
 */
 
-if object_id('#temp_bin_image') is not null
-	drop table #temp_bin_image
-go
 
 with
+	------------------------------------
+	-- 固定パラメータ
+	------------------------------------
 	Param as (
-		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'delete_24_64_48'
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Desert_24_256_192'
 	),
+	------------------------------------
+	-- ビットマップファイルヘッダ
+	------------------------------------
 	BITMAPFILEHEADER as (
 		select
 			convert(char(2), convert(binary(2), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 1, 2), 2)) as bfType,
@@ -37,6 +40,9 @@ with
 		from
 			Param as p
 	),
+	------------------------------------
+	-- ビットマップ情報ヘッダ
+	------------------------------------
 	BITMAPINFOHEADER as (
 		select
 			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 15, 4), 2)))) as biSize,
@@ -53,15 +59,21 @@ with
 		from
 			Param as p
 	),
+	------------------------------------
+	-- ビットマップ情報全体
+	------------------------------------
 	BitmapInfo as (
 		select
 			bf.*,
 			bi.*,
-			(bi.biBitCount * bi.biWidth * bi.biHeight) as PixelCount
+			(bi.biBitCount/8 * bi.biWidth * bi.biHeight) as PixelCount
 		from
 			BITMAPFILEHEADER bf,
 			BITMAPINFOHEADER bi
 	),
+	------------------------------------
+	-- ピクセル数分のシーケンス生成
+	------------------------------------
 	Seq(x) as (
 		select 0
 		union all
@@ -73,6 +85,9 @@ with
 		where
 			x < i.PixelCount
 	),
+	------------------------------------
+	-- 各ピクセルのRGBを取得
+	------------------------------------
 	RawPixels as (
 		select
 			s.x,
@@ -87,6 +102,9 @@ with
 		where
 			s.x < i.PixelCount / 3
 	),
+	------------------------------------
+	-- 2値化
+	------------------------------------
 	Binarization as (
 		select
 			p.x as pos,
@@ -100,7 +118,7 @@ with
 			end) as pix
 		from
 			RawPixels as p,
-			(select 128 as threshold) as Param
+			(select 100 as threshold) as Param
 	)
 select
 	*
@@ -113,10 +131,28 @@ from
 option (maxrecursion 0)
 
 
+------------------------------------
+-- 列名一覧作成
+------------------------------------
+declare @col_list varchar(max) = ''
+
 select
-	*
+	@col_list = 
+		@col_list +
+		(case when len(@col_list) > 0 then ',' + char(13) else '' end) +
+		'(case when max(case when col_idx = 0 then pix else 0 end) = 1 then ''■'' else '''' end) as _' + cast(col_idx as varchar(max))
 from
 	#temp_bin_image
+group by
+	col_idx
+order by
+	col_idx
+
+declare @sql varchar(max) = 
+	'select ' + @col_list + ' from #temp_bin_image group by row_idx order by row_idx'
+
+print @sql
+execute sp_sqlexec @sql
 
 go
 
