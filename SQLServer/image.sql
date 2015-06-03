@@ -91,9 +91,9 @@ with
 	RawPixels as (
 		select
 			s.x,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 0, 1), 2) as pix_r,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 1, 1), 2) as pix_g,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 2, 1), 2) as pix_b,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 0, 1), 2) as pix_r,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 1, 1), 2) as pix_g,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 2, 1), 2) as pix_b,
 			i.*
 		from
 			Param as p,
@@ -111,14 +111,14 @@ with
 			round(p.x / p.biWidth, 0) as row_idx,
 			p.x % p.biWidth as col_idx,
 			(case
-				when p.pix_r > Param.threshold then 0
-				when p.pix_g > Param.threshold then 0
-				when p.pix_b > Param.threshold then 0
-				else 1
+				when p.pix_r > Param.threshold then 1
+				when p.pix_g > Param.threshold then 1
+				when p.pix_b > Param.threshold then 1
+				else 0
 			end) as pix
 		from
 			RawPixels as p,
-			(select 100 as threshold) as Param
+			(select 254 as threshold) as Param
 	)
 select
 	*
@@ -140,7 +140,7 @@ select
 	@col_list = 
 		@col_list +
 		(case when len(@col_list) > 0 then ',' + char(13) else '' end) +
-		'(case when max(case when col_idx = 0 then pix else 0 end) = 1 then ''■'' else '''' end) as _' + cast(col_idx as varchar(max))
+		'(case when max(case when col_idx = ' + cast(col_idx as varchar(max)) + ' then pix else 0 end) = 1 then '''' else ''■'' end) as _' + cast(col_idx as varchar(max))
 from
 	#temp_bin_image
 group by
