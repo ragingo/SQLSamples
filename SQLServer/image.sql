@@ -1,16 +1,22 @@
-﻿use sample
+﻿
+use sample
 go
 
+------------------------------------
+-- 画像データ格納テーブル
+------------------------------------
 /*
 create table image_data(
 	id int not null primary key identity,
 	name varchar(100),
 	data varbinary(max)
 )
-
 go
 */
 
+------------------------------------
+-- 画像登録
+------------------------------------
 /*
 insert into image_data(name, data)
 select
@@ -18,6 +24,11 @@ select
 	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Japan_24_64_48.bmp', SINGLE_BLOB) as bin)
 go
 */
+
+------------------------------------
+-- 登録画像一覧
+------------------------------------
+--select * from image_data
 
 
 with
@@ -91,9 +102,9 @@ with
 	RawPixels as (
 		select
 			s.x,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 0, 1), 2) as pix_r,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 1, 1), 2) as pix_g,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + 1 + (s.x * 3) + 2, 1), 2) as pix_b,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 0, 1), 2) as pix_r,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 1, 1), 2) as pix_g,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 2, 1), 2) as pix_b,
 			i.*
 		from
 			Param as p,
@@ -140,7 +151,12 @@ select
 	@col_list = 
 		@col_list +
 		(case when len(@col_list) > 0 then ',' + char(13) else '' end) +
-		'(case when max(case when col_idx = ' + cast(col_idx as varchar(max)) + ' then pix else 0 end) = 1 then '''' else ''■'' end) as _' + cast(col_idx as varchar(max))
+		'(case ' +
+			'when max(case when col_idx = ' + cast(col_idx as varchar(max)) + ' then pix else 0 end) = 1 then ' +
+				''''' ' +
+			'else ' +
+				'''■'' ' +
+		'end) as _' + cast(col_idx as varchar(max))
 from
 	#temp_bin_image
 group by
@@ -148,15 +164,25 @@ group by
 order by
 	col_idx
 
+------------------------------------
+-- 出力
+------------------------------------
 declare @sql varchar(max) = 
-	'select ' + @col_list + ' from #temp_bin_image group by row_idx order by row_idx'
+	'select ' + char(13) +
+		@col_list + char(13) +
+	'from ' + char(13) +
+		'#temp_bin_image ' + char(13) +
+	'group by row_idx ' + char(13) +
+	'order by row_idx'
 
 print @sql
 execute sp_sqlexec @sql
 
 go
 
-
+------------------------------------
+-- 後始末
+------------------------------------
 drop table #temp_bin_image
 
 go
