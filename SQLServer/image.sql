@@ -173,7 +173,7 @@ declare @sql varchar(max) =
 	'from ' + char(13) +
 		'#temp_bin_image ' + char(13) +
 	'group by row_idx ' + char(13) +
-	'order by row_idx'
+	'order by row_idx desc'
 
 print @sql
 execute sp_sqlexec @sql
