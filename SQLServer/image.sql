@@ -14,8 +14,8 @@ go
 /*
 insert into image_data(name, data)
 select
-	'Desert_24_256_192',
-	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Desert_24_256_192.bmp', SINGLE_BLOB) as bin)
+	'Japan_24_64_48',
+	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Japan_24_64_48.bmp', SINGLE_BLOB) as bin)
 go
 */
 
@@ -25,7 +25,7 @@ with
 	-- 固定パラメータ
 	------------------------------------
 	Param as (
-		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Desert_24_256_192'
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Japan_24_64_48'
 	),
 	------------------------------------
 	-- ビットマップファイルヘッダ
@@ -91,9 +91,9 @@ with
 	RawPixels as (
 		select
 			s.x,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + s.x + 0, 1), 2) as pix_r,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + s.x + 1, 1), 2) as pix_g,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + s.x + 2, 1), 2) as pix_b,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 0, 1), 2) as pix_r,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 1, 1), 2) as pix_g,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, i.bfOffBits + (s.x * 3) + 2, 1), 2) as pix_b,
 			i.*
 		from
 			Param as p,
@@ -111,10 +111,10 @@ with
 			round(p.x / p.biWidth, 0) as row_idx,
 			p.x % p.biWidth as col_idx,
 			(case
-				when p.pix_r > Param.threshold then 1
-				when p.pix_g > Param.threshold then 1
-				when p.pix_b > Param.threshold then 1
-				else 0
+				when p.pix_r > Param.threshold then 0
+				when p.pix_g > Param.threshold then 0
+				when p.pix_b > Param.threshold then 0
+				else 1
 			end) as pix
 		from
 			RawPixels as p,
