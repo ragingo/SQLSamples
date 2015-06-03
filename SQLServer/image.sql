@@ -25,7 +25,7 @@ with
 	-- 固定パラメータ
 	------------------------------------
 	Param as (
-		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Japan_24_64_48'
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Koala_24_256_192'
 	),
 	------------------------------------
 	-- ビットマップファイルヘッダ
@@ -118,7 +118,7 @@ with
 			end) as pix
 		from
 			RawPixels as p,
-			(select 254 as threshold) as Param
+			(select 128 as threshold) as Param
 	)
 select
 	*
