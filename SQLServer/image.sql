@@ -85,16 +85,15 @@ with
 	------------------------------------
 	-- ピクセル数分のシーケンス生成
 	------------------------------------
-	Seq(x) as (
-		select 0
+	Seq(x, y) as (
+		select 0, (select PixelCount from BitmapInfo)
 		union all
 		select
-			x+1
+			x+1, y
 		from
-			Seq,
-			BitmapInfo i
+			Seq
 		where
-			x < i.PixelCount
+			x < y
 	),
 	------------------------------------
 	-- 各ピクセルのRGBを取得
