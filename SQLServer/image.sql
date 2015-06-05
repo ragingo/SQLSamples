@@ -85,41 +85,41 @@ with
 	------------------------------------
 	-- ピクセル数分のシーケンス生成
 	------------------------------------
-	Seq(x, y) as (
+	Seq(rowIndex, maxRowCount) as (
 		select 0, (select PixelCount from BitmapInfo)
 		union all
 		select
-			x+1, y
+			rowIndex+1, maxRowCount
 		from
 			Seq
 		where
-			x < y
+			rowIndex < maxRowCount
 	),
 	------------------------------------
 	-- 各ピクセルのRGBを取得
 	------------------------------------
 	RawPixels as (
 		select
-			s.x,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 0, 1), 2) as pix_r,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 1, 1), 2) as pix_g,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.x * 3) + 2, 1), 2) as pix_b,
+			s.rowIndex,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 0, 1), 2) as pix_r,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 1, 1), 2) as pix_g,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 2, 1), 2) as pix_b,
 			i.*
 		from
 			Param as p,
 			Seq as s,
 			BitmapInfo i
 		where
-			s.x < i.PixelCount / 3
+			s.rowIndex < s.maxRowCount / 3
 	),
 	------------------------------------
 	-- 2値化
 	------------------------------------
 	Binarization as (
 		select
-			p.x as pos,
-			round(p.x / p.biWidth, 0) as row_idx,
-			p.x % p.biWidth as col_idx,
+			p.rowIndex as pos,
+			round(p.rowIndex / p.biWidth, 0) as row_idx,
+			p.rowIndex % p.biWidth as col_idx,
 			(case
 				when p.pix_r > Param.threshold then 1
 				when p.pix_g > Param.threshold then 1
