@@ -2,12 +2,18 @@
 use sample
 go
 
+
+
+--drop table image_data
+--truncate table image_data
+
+
 ------------------------------------
 -- 画像データ格納テーブル
 ------------------------------------
 /*
 create table image_data(
-	id int not null primary key identity,
+	id int not null identity(1,1) constraint PK_image_data primary key,
 	name varchar(100),
 	data varbinary(max)
 )
@@ -20,8 +26,8 @@ go
 /*
 insert into image_data(name, data)
 select
-	'Japan_24_64_48',
-	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Japan_24_64_48.bmp', SINGLE_BLOB) as bin)
+	'Koala_24_256_192',
+	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Koala_24_256_192.bmp', SINGLE_BLOB) as bin)
 go
 */
 
@@ -140,6 +146,14 @@ from
 
 option (maxrecursion 0)
 
+------------------------------------
+-- 件数チェック
+------------------------------------
+if (select count(*) from #temp_bin_image) = 0
+begin
+	print '#temp_bin_image is empty.'
+	goto Finish
+end
 
 ------------------------------------
 -- 列名一覧作成
@@ -155,7 +169,7 @@ select
 				''''' ' +
 			'else ' +
 				'''■'' ' +
-		'end) as _' + cast(col_idx as varchar(max))
+		'end) as c' + cast(col_idx as varchar(max))
 from
 	#temp_bin_image
 group by
@@ -166,8 +180,9 @@ order by
 ------------------------------------
 -- 出力
 ------------------------------------
-declare @sql varchar(max) = 
+declare @sql varchar(max) =
 	'select ' + char(13) +
+		'row_idx as r,' + char(13) +
 		@col_list + char(13) +
 	'from ' + char(13) +
 		'#temp_bin_image ' + char(13) +
@@ -177,11 +192,11 @@ declare @sql varchar(max) =
 print @sql
 execute sp_sqlexec @sql
 
-go
 
 ------------------------------------
 -- 後始末
 ------------------------------------
+Finish:
 drop table #temp_bin_image
 
 go
