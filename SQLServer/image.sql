@@ -9,7 +9,7 @@ go
 
 
 ------------------------------------
--- 画像データ格納テーブル
+-- 入力画像データ格納テーブル
 ------------------------------------
 /*
 create table image_data(
@@ -18,6 +18,31 @@ create table image_data(
 	data varbinary(max)
 )
 go
+*/
+
+------------------------------------
+-- 出力画像データ格納テーブル
+------------------------------------
+/*
+create table pixels(
+	pos int not null,
+	row_index int not null,
+	col_index int not null,
+	alpha tinyint not null,
+	red tinyint not null,
+	green tinyint not null,
+	blue tinyint not null,
+	constraint PK_pixels_rowcol primary key(row_index, col_index)
+)
+*/
+/*
+create table result_image(
+	pos int not null,
+	row_index int not null,
+	col_index int not null,
+	pix int not null,
+	constraint PK_result_image_rowcol primary key(row_index, col_index)
+)
 */
 
 ------------------------------------
@@ -37,6 +62,17 @@ go
 --select * from image_data
 
 
+------------------------------------
+-- 前処理
+------------------------------------
+truncate table bitmap_info
+truncate table pixels
+truncate table result_image
+go
+
+------------------------------------
+-- ビットマップ情報取得
+------------------------------------
 with
 	------------------------------------
 	-- 固定パラメータ
@@ -87,12 +123,30 @@ with
 		from
 			BITMAPFILEHEADER bf,
 			BITMAPINFOHEADER bi
+	)
+insert into bitmap_info
+select
+	*
+from
+	BitmapInfo
+
+go
+
+------------------------------------
+-- 全ピクセルデータ取得
+------------------------------------
+with
+	------------------------------------
+	-- 固定パラメータ
+	------------------------------------
+	Param as (
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Koala_24_256_192'
 	),
 	------------------------------------
 	-- ピクセル数分のシーケンス生成
 	------------------------------------
 	Seq(rowIndex, maxRowCount) as (
-		select 0, (select PixelCount from BitmapInfo)
+		select 0, (select PixelCount from bitmap_info)
 		union all
 		select
 			rowIndex+1, maxRowCount
@@ -106,52 +160,73 @@ with
 	------------------------------------
 	RawPixels as (
 		select
-			s.rowIndex,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 0, 1), 2) as pix_r,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 1, 1), 2) as pix_g,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 2, 1), 2) as pix_b,
+			s.rowIndex as pos,
+			round(s.rowIndex / i.biWidth, 0) as row_index,
+			s.rowIndex % i.biWidth as col_index,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 0, 1), 2) as red,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 1, 1), 2) as green,
+			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 2, 1), 2) as blue,
 			i.*
 		from
 			Param as p,
 			Seq as s,
-			BitmapInfo i
+			bitmap_info i
 		where
 			s.rowIndex < s.maxRowCount / 3
+	)
+insert into pixels
+select
+	pos,
+	row_index,
+	col_index,
+	1 as alpha,
+	red,
+	green,
+	blue
+from
+	RawPixels
+
+option (maxrecursion 0)
+
+go
+
+------------------------------------
+-- 画像処理
+------------------------------------
+with
+	Param as (
+		select 128 as threshold
 	),
 	------------------------------------
 	-- 2値化
 	------------------------------------
 	Binarization as (
 		select
-			p.rowIndex as pos,
-			round(p.rowIndex / p.biWidth, 0) as row_idx,
-			p.rowIndex % p.biWidth as col_idx,
+			p.pos,
+			p.row_index,
+			p.col_index,
 			(case
-				when p.pix_r > Param.threshold then 1
-				when p.pix_g > Param.threshold then 1
-				when p.pix_b > Param.threshold then 1
+				when p.red > Param.threshold then 1
+				when p.green > Param.threshold then 1
+				when p.blue > Param.threshold then 1
 				else 0
 			end) as pix
 		from
-			RawPixels as p,
-			(select 128 as threshold) as Param
+			pixels as p,
+			Param
 	)
+insert into result_image
 select
 	*
-into
-	#temp_bin_image
 from
 	Binarization
-
-
-option (maxrecursion 0)
 
 ------------------------------------
 -- 件数チェック
 ------------------------------------
-if (select count(*) from #temp_bin_image) = 0
+if (select count(*) from result_image) = 0
 begin
-	print '#temp_bin_image is empty.'
+	print 'result_image is empty.'
 	goto Finish
 end
 
@@ -165,29 +240,29 @@ select
 		@col_list +
 		(case when len(@col_list) > 0 then ',' + char(13) else '' end) +
 		'(case ' +
-			'when max(case when col_idx = ' + cast(col_idx as varchar(max)) + ' then pix else 0 end) = 1 then ' +
+			'when max(case when col_index = ' + cast(col_index as varchar(max)) + ' then pix else 0 end) = 1 then ' +
 				''''' ' +
 			'else ' +
 				'''■'' ' +
-		'end) as c' + cast(col_idx as varchar(max))
+		'end) as c' + cast(col_index as varchar(max))
 from
-	#temp_bin_image
+	result_image
 group by
-	col_idx
+	col_index
 order by
-	col_idx
+	col_index
 
 ------------------------------------
 -- 出力
 ------------------------------------
 declare @sql varchar(max) =
 	'select ' + char(13) +
-		'row_idx as r,' + char(13) +
+		'row_index as r,' + char(13) +
 		@col_list + char(13) +
 	'from ' + char(13) +
-		'#temp_bin_image ' + char(13) +
-	'group by row_idx ' + char(13) +
-	'order by row_idx desc'
+		'result_image ' + char(13) +
+	'group by row_index ' + char(13) +
+	'order by row_index desc'
 
 print @sql
 execute sp_sqlexec @sql
@@ -197,7 +272,6 @@ execute sp_sqlexec @sql
 -- 後始末
 ------------------------------------
 Finish:
-drop table #temp_bin_image
 
 go
 
