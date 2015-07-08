@@ -1,3 +1,4 @@
 *.suo
 *.user
+SQLServer/MSSqlUtils/MSSqlUtils/bin
 SQLServer/MSSqlUtils/MSSqlUtils/obj

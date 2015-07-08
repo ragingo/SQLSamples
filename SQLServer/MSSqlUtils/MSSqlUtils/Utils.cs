@@ -51,5 +51,17 @@ namespace MSSqlUtils
 		{
 			return binary.Length;
 		}
+
+		[SqlFunction]
+		public static byte[] Reverse(SqlBytes binary)
+		{
+			if (binary.IsNull)
+			{
+				return null;
+			}
+			byte[] buf = binary.Value;
+			Array.Reverse(buf);
+			return buf;
+		}
 	}
 }

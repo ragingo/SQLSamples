@@ -9,6 +9,7 @@
 --drop function [dbo].[Collection_Skip]
 --drop function [dbo].[Collection_Range]
 --drop function [dbo].[Collection_Length]
+--drop function [dbo].[Collection_Reverse]
 
 go
 
@@ -53,3 +54,13 @@ create function [dbo].[Collection_Length]
 returns bigint
 as
 external name [MSSqlUtils].[MSSqlUtils.Collection].[Length]
+
+go
+
+create function [dbo].[Collection_Reverse]
+(
+	@binary varbinary(max)
+)
+returns varbinary(max)
+as
+external name [MSSqlUtils].[MSSqlUtils.Collection].[Reverse]

@@ -85,11 +85,11 @@ with
 	------------------------------------
 	BITMAPFILEHEADER as (
 		select
-			convert(char(2), convert(binary(2), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 1, 2), 2)) as bfType,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata,  3, 4), 2)))) as bfSize,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata,  7, 2), 2)))) as bfReserved1,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata,  9, 2), 2)))) as bfReserved2,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 11, 4), 2)))) as bfOffBits
+			convert(char(2), dbo.Collection_Range(p.rawdata, 0, 2)) as bfType,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata,  2, 4))) as bfSize,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata,  6, 2))) as bfReserved1,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata,  8, 2))) as bfReserved2,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 10, 4))) as bfOffBits
 		from
 			Param as p
 	),
@@ -98,17 +98,17 @@ with
 	------------------------------------
 	BITMAPINFOHEADER as (
 		select
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 15, 4), 2)))) as biSize,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 19, 4), 2)))) as biWidth,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 23, 4), 2)))) as biHeight,
-			convert(int, convert(binary(2), reverse(convert(binary(2), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 27, 2), 2)))) as biPlanes,
-			convert(int, convert(binary(2), reverse(convert(binary(2), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 29, 2), 2)))) as biBitCount,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 31, 4), 2)))) as biCopmression,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 35, 4), 2)))) as biSizeImage,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 39, 4), 2)))) as biXPixPerMeter,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 43, 4), 2)))) as biYPixPerMeter,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 47, 4), 2)))) as biClrUsed,
-			convert(int, convert(binary(4), reverse(convert(binary(4), master.dbo.fn_varbintohexsubstring(0, p.rawdata, 51, 4), 2)))) as biCirImportant
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 14, 4))) as biSize,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 18, 4))) as biWidth,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 22, 4))) as biHeight,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 26, 2))) as biPlanes,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 28, 2))) as biBitCount,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 30, 4))) as biCopmression,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 34, 4))) as biSizeImage,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 38, 4))) as biXPixPerMeter,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 42, 4))) as biYPixPerMeter,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 46, 4))) as biClrUsed,
+			convert(int, dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, 50, 4))) as biCirImportant
 		from
 			Param as p
 	),
@@ -163,9 +163,9 @@ with
 			s.rowIndex as pos,
 			round(s.rowIndex / i.biWidth, 0) as row_index,
 			s.rowIndex % i.biWidth as col_index,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 0, 1), 2) as red,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 1, 1), 2) as green,
-			convert(binary(1), master.dbo.fn_varbintohexsubstring(0, p.rawdata, (i.bfOffBits + 1) + (s.rowIndex * 3) + 2, 1), 2) as blue,
+			dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, i.bfOffBits + (s.rowIndex * 3) + 0, 1)) as red,
+			dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, i.bfOffBits + (s.rowIndex * 3) + 1, 1)) as green,
+			dbo.Collection_Reverse(dbo.Collection_Range(p.rawdata, i.bfOffBits + (s.rowIndex * 3) + 2, 1)) as blue,
 			i.*
 		from
 			Param as p,
@@ -264,7 +264,8 @@ declare @sql varchar(max) =
 	'group by row_index ' + char(13) +
 	'order by row_index desc'
 
-print @sql
+-- memo: 下記2行（出力・実行）で約2秒
+--print @sql
 execute sp_sqlexec @sql
 
 
