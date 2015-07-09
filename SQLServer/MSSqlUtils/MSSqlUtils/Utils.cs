@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.IO;
 using System.Linq;
+using System.Media;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.SqlServer.Server;
@@ -62,6 +64,23 @@ namespace MSSqlUtils
 			byte[] buf = binary.Value;
 			Array.Reverse(buf);
 			return buf;
+		}
+	}
+
+	public class MultiMedia
+	{
+		[SqlProcedure]
+		public static void PlaySound(SqlString path)
+		{
+			if (string.IsNullOrEmpty(path.Value))
+			{
+				return;
+			}
+			if (!File.Exists(path.Value))
+			{
+				return;
+			}
+			new SoundPlayer(path.Value).PlaySync();
 		}
 	}
 }
