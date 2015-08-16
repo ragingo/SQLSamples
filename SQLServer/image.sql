@@ -51,8 +51,8 @@ create table result_image(
 /*
 insert into image_data(name, data)
 select
-	'Koala_24_256_192',
-	(select * from openrowset(bulk N'C:\Users\Public\Pictures\Sample Pictures\Koala_24_256_192.bmp', SINGLE_BLOB) as bin)
+	'delete_24_64_48',
+	(select * from openrowset(bulk N'D:\dev\src\my\sqlsamples\SQLServer\data\delete_24_64_48.bmp', SINGLE_BLOB) as bin)
 go
 */
 
@@ -78,7 +78,7 @@ with
 	-- 固定パラメータ
 	------------------------------------
 	Param as (
-		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Koala_24_256_192'
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'delete_24_64_48'
 	),
 	------------------------------------
 	-- ビットマップファイルヘッダ
@@ -140,7 +140,7 @@ with
 	-- 固定パラメータ
 	------------------------------------
 	Param as (
-		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'Koala_24_256_192'
+		select name, convert(varchar(max), data, 2) as data, data as rawdata from image_data where name = 'delete_24_64_48'
 	),
 	------------------------------------
 	-- ピクセル数分のシーケンス生成
@@ -206,10 +206,10 @@ with
 			p.row_index,
 			p.col_index,
 			(case
-				when p.red > Param.threshold then 1
-				when p.green > Param.threshold then 1
-				when p.blue > Param.threshold then 1
-				else 0
+				when p.red < Param.threshold then 0
+				when p.green < Param.threshold then 0
+				when p.blue < Param.threshold then 0
+				else 1
 			end) as pix
 		from
 			pixels as p,
