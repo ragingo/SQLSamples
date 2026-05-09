@@ -4,30 +4,17 @@ with
     input as (
         select '+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-.------------.<++++++++.--------.+++.------.--------.>+.' as code
     ),
-    -- デバッグ用
-    tokens as (
-        select '+' as ch, 'val_inc' as name
-        union all
-        select '-' as ch, 'val_dec'
-        union all
-        select '>' as ch, 'ptr_inc'
-        union all
-        select '<' as ch, 'ptr_dec'
-        union all
-        select '.' as ch, 'val_out'
-        union all
-        select '[' as ch, 'loop_begin'
-        union all
-        select ']' as ch, 'loop_end'
-    ),
-    -- デバッグ用
-    tokenize(code, length, idx, ch, token) as (
+    -- Step 1 コードを分解し縦に並べる
+    -- code: ソースコード
+    -- length: ソースコードの文字列長
+    -- idx: 1始まりのインデックス (1文字1行になるため、max(idx) = length)
+    -- ch: 1文字 (code[idx])
+    parse1(code, length, idx, ch) as (
         select
             code,
             len(code),
             1,
-            substring(code, 1, 1),
-            (select name from tokens where ch = substring(code, 1, 1))
+            substring(code, 1, 1)
         from
             input
         union all
@@ -35,20 +22,22 @@ with
             code,
             len(code),
             idx + 1,
-            substring(code, idx + 1, 1),
-            (select name from tokens where ch = substring(code, idx + 1, 1))
+            substring(code, idx + 1, 1)
         from
-            tokenize
+            parse1
         where
             idx < len(code)
     ),
+    -- Step 2 コードを解析しつつ実行
     -- arr: "ptr1=val1,ptr2=val2"
-    parser1(length, idx, ch, token, arr, ptr, val, loop_begin) as (
+    -- ptr: 現在のポインタ (<>で移動。0始まり。)
+    -- val: 現在のポインタが指す位置にある値
+    -- loop_begin: ループ開始インデックス ([ が登場したときの idx を保持)
+    parse2(length, idx, ch, arr, ptr, val, loop_begin) as (
         select
             t.length,
             t.idx,
             cast(t.ch as varchar),
-            cast(t.token as varchar),
             cast(case t.ch
                 when '+' then '0=1'
                 when '-' then '0=-1'
@@ -66,7 +55,7 @@ with
             end,
             0
         from
-            tokenize as t
+            parse1 as t
         where
             idx = 1
         union all
@@ -81,7 +70,6 @@ with
                 else t.idx
             end,
             cast(t.ch as varchar),
-            cast(t.token as varchar),
             case t.ch
                 when '+' then
                     regexp_replace(
@@ -129,13 +117,14 @@ with
                 else loop_begin
             end
         from
-            tokenize as t
-            inner join parser1 as p on p.idx = t.idx - 1
+            parse1 as t
+            inner join parse2 as p on p.idx = t.idx - 1
         where
             t.idx > 1 and
             t.idx <= t.length
     ),
-    parser2 as (
+    -- Step 3 実行結果を出力
+    parse3 as (
         select
             *,
             case ch
@@ -143,12 +132,12 @@ with
                 else null
             end as output
         from
-            parser1
+            parse2
     )
 select
     *
 from
-    parser2
+    parse3
 where
     idx > 0 and
     output is not null
