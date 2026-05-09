@@ -1,8 +1,10 @@
 -- SQL Server 2025 で動作確認
 with
+    -- Brainfuck コード
     input as (
         select '+++++++++[>++++++++>+++++++++++>+++++<<<-]>.>++.+++++++..+++.>-.------------.<++++++++.--------.+++.------.--------.>+.' as code
     ),
+    -- デバッグ用
     tokens as (
         select '+' as ch, 'val_inc' as name
         union all
@@ -18,6 +20,7 @@ with
         union all
         select ']' as ch, 'loop_end'
     ),
+    -- デバッグ用
     tokenize(code, length, idx, ch, token) as (
         select
             code,
@@ -38,12 +41,6 @@ with
             tokenize
         where
             idx < len(code)
-    ),
-    tmp1 as (
-        select
-            *
-        from
-            tokenize
     ),
     -- arr: "ptr1=val1,ptr2=val2"
     parser1(length, idx, ch, token, arr, ptr, val, loop_begin) as (
