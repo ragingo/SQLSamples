@@ -35,42 +35,42 @@ with
     -- loop_begin: ループ開始インデックス ([ が登場したときの idx を保持)
     parse2(length, idx, ch, arr, ptr, val, loop_begin) as (
         select
-            t.length,
-            t.idx,
-            cast(t.ch as varchar),
-            cast(case t.ch
+            p.length,
+            p.idx,
+            cast(p.ch as varchar),
+            cast(case p.ch
                 when '+' then '0=1'
                 when '-' then '0=-1'
                 else ''
             end as varchar(8000)),
-            case t.ch
+            case p.ch
                 when '>' then 1
                 when '<' then - 1
                 else 0
             end,
-            case t.ch
+            case p.ch
                 when '+' then 1
                 when '-' then -1
                 else 0
             end,
             0
         from
-            parse1 as t
+            parse1 as p
         where
             idx = 1
         union all
         select
-            t.length,
-            case t.ch
+            p1.length,
+            case p1.ch
                 when ']' then
                     case
                         when val > 0 then loop_begin
-                        else t.idx
+                        else p1.idx
                     end
-                else t.idx
+                else p1.idx
             end,
-            cast(t.ch as varchar),
-            case t.ch
+            cast(p1.ch as varchar),
+            case p1.ch
                 when '+' then
                     regexp_replace(
                         arr,
@@ -95,33 +95,33 @@ with
                     end
                 else arr
             end,
-            case t.ch
+            case p1.ch
                 when '>' then ptr + 1
                 when '<' then ptr - 1
                 else ptr
             end,
-            case t.ch
+            case p1.ch
                 when '+' then cast(regexp_substr(arr, concat(ptr, '=(-?\d+)'), 1, 1, 'i', 1) as int) + 1
                 when '-' then cast(regexp_substr(arr, concat(ptr, '=(-?\d+)'), 1, 1, 'i', 1) as int) - 1
                 when '>' then coalesce(regexp_substr(arr, concat(ptr + 1, '=(-?\d+)'), 1, 1, 'i', 1), 0)
                 when '<' then coalesce(regexp_substr(arr, concat(ptr - 1, '=(-?\d+)'), 1, 1, 'i', 1), 0)
                 else val
             end,
-            case t.ch
-                when '[' then t.idx
+            case p1.ch
+                when '[' then p1.idx
                 when ']' then
                     case
                         when val > 0 then loop_begin
-                        else t.idx
+                        else p1.idx
                     end
                 else loop_begin
             end
         from
-            parse1 as t
-            inner join parse2 as p on p.idx = t.idx - 1
+            parse1 as p1
+            inner join parse2 as p2 on p2.idx = p1.idx - 1
         where
-            t.idx > 1 and
-            t.idx <= t.length
+            p1.idx > 1 and
+            p1.idx <= p1.length
     ),
     -- Step 3 実行結果を出力
     parse3 as (
